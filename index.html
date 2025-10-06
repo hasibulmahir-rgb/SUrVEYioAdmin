@@ -1,0 +1,1714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SurveyIO - Admin Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #ff4500;
+            --dark-blue: #1a237e;
+            --light-gray: #f5f7fa;
+            --border-color: #e0e4e8;
+            --text-primary: #212529;
+            --text-secondary: #6c757d;
+            --error-color: #dc3545;
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --info-color: #17a2b8;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #f8f9fa;
+            min-height: 100vh;
+        }
+
+        .admin-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 250px;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 1.5rem 1rem;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .logo h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+
+        .nav-menu {
+            list-style: none;
+        }
+
+        .nav-item {
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 0.8rem 1rem;
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+
+        .nav-link i {
+            margin-right: 10px;
+            font-size: 1.2rem;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 1.5rem;
+            margin-left: 250px;
+            overflow-y: auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.25rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            font-size: 1.5rem;
+        }
+
+        .stat-icon.users { background: rgba(40, 167, 69, 0.1); color: var(--success-color); }
+        .stat-icon.tasks { background: rgba(255, 69, 0, 0.1); color: var(--primary-color); }
+        .stat-icon.earnings { background: rgba(23, 162, 184, 0.1); color: var(--info-color); }
+        .stat-icon.withdrawals { background: rgba(255, 193, 7, 0.1); color: var(--warning-color); }
+
+        .content-section {
+            background: white;
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th, .data-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .data-table th {
+            background: var(--light-gray);
+            font-weight: 600;
+        }
+
+        .data-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .status-badge {
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .status-pending { background: rgba(255, 193, 7, 0.1); color: var(--warning-color); }
+        .status-completed { background: rgba(40, 167, 69, 0.1); color: var(--success-color); }
+        .status-active { background: rgba(23, 162, 184, 0.1); color: var(--info-color); }
+        .status-approved { background: rgba(40, 167, 69, 0.1); color: var(--success-color); }
+        .status-rejected { background: rgba(220, 53, 69, 0.1); color: var(--error-color); }
+
+        .action-btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin: 0.2rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn-approve { background: var(--success-color); color: white; }
+        .btn-reject { background: var(--error-color); color: white; }
+        .btn-edit { background: var(--info-color); color: white; }
+        .btn-delete { background: var(--error-color); color: white; }
+        .btn-add { background: var(--primary-color); color: white; padding: 0.8rem 1.5rem; }
+        .btn-view { background: var(--warning-color); color: white; }
+
+        .btn-approve:hover { background: #218838; }
+        .btn-reject:hover { background: #c82333; }
+        .btn-edit:hover { background: #138496; }
+        .btn-delete:hover { background: #c82333; }
+        .btn-add:hover { background: #e03e00; }
+        .btn-view:hover { background: #e0a800; }
+
+        /* Form Styles */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(255, 69, 0, 0.1);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modal-header h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+        /* Login Page */
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .login-card {
+            background: white;
+            border-radius: 15px;
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .input-group {
+            margin-bottom: 1.2rem;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 0.9rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 1rem;
+            border: none;
+            border-radius: 8px;
+            background-color: var(--primary-color);
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .login-btn:hover {
+            background-color: #e03e00;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+
+        .error-message {
+            background: #fee;
+            border: 1px solid var(--error-color);
+            color: var(--error-color);
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+
+        .success-message {
+            background: #efe;
+            border: 1px solid var(--success-color);
+            color: var(--success-color);
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+
+        .info-message {
+            background: #eef;
+            border: 1px solid var(--info-color);
+            color: var(--info-color);
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+
+        .search-box {
+            padding: 0.8rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            width: 300px;
+            margin-bottom: 1rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .admin-container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                position: relative;
+                height: auto;
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .data-table {
+                display: block;
+                overflow-x: auto;
+            }
+            
+            .search-box {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="login-page" class="login-container">
+        <div class="login-card">
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <h1 style="font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem;">SurveyIO <span style="color: var(--primary-color);">Admin</span></h1>
+                <p style="color: var(--text-secondary);">Complete Admin Dashboard</p>
+            </div>
+            <div class="input-group">
+                <input type="email" id="admin-email" placeholder="Enter admin email" value="admin@surveyio.com">
+            </div>
+            <div class="input-group">
+                <input type="password" id="admin-password" placeholder="Enter password" value="Admin123!@#">
+            </div>
+            <p id="login-error" style="color: var(--error-color); display: none; margin: 1rem 0;"></p>
+            <button class="login-btn" onclick="adminLogin()" id="login-btn">
+                <span id="login-btn-text">Login to Dashboard</span>
+            </button>
+        </div>
+    </div>
+
+    <div id="admin-dashboard" class="admin-container" style="display: none;">
+        <div class="sidebar">
+            <div class="logo">
+                <h1>SurveyIO <span style="color: var(--primary-color);">Admin</span></h1>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item"><a class="nav-link active" onclick="showSection('dashboard')"><i class="fas fa-tachometer-alt"></i>Dashboard</a></li>
+                <li class="nav-item"><a class="nav-link" onclick="showSection('tasks')"><i class="fas fa-tasks"></i>Tasks</a></li>
+                <li class="nav-item"><a class="nav-link" onclick="showSection('users')"><i class="fas fa-users"></i>Users</a></li>
+                <li class="nav-item"><a class="nav-link" onclick="showSection('withdrawals')"><i class="fas fa-money-bill-wave"></i>Withdrawals</a></li>
+                <li class="nav-item"><a class="nav-link" onclick="showSection('activities')"><i class="fas fa-history"></i>Activities</a></li>
+                <li class="nav-item"><a class="nav-link" onclick="showSection('settings')"><i class="fas fa-cog"></i>Settings</a></li>
+                <li class="nav-item"><a class="nav-link" onclick="adminLogout()"><i class="fas fa-sign-out-alt"></i>Logout</a></li>
+            </ul>
+        </div>
+
+        <div class="main-content">
+            <div class="header">
+                <h2 id="section-title">Dashboard Overview</h2>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--primary-color); display: flex; align-items: center; justify-content: center; color: white;">
+                        <i class="fas fa-user-shield"></i>
+                    </div>
+                    <div>
+                        <div id="admin-name">Administrator</div>
+                        <small id="admin-email-display">admin@surveyio.com</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard Section -->
+            <div id="dashboard-section">
+                <div id="dashboard-message"></div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon users"><i class="fas fa-users"></i></div>
+                        <div>
+                            <h3 id="total-users">0</h3>
+                            <p>Total Users</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon tasks"><i class="fas fa-tasks"></i></div>
+                        <div>
+                            <h3 id="total-tasks">0</h3>
+                            <p>Active Tasks</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon earnings"><i class="fas fa-dollar-sign"></i></div>
+                        <div>
+                            <h3 id="total-earnings">$0.00</h3>
+                            <p>Total Earnings</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon withdrawals"><i class="fas fa-money-bill-wave"></i></div>
+                        <div>
+                            <h3 id="pending-withdrawals">0</h3>
+                            <p>Pending Withdrawals</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="content-section">
+                    <h3 style="margin-bottom: 1rem;">Quick Actions</h3>
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                        <button class="btn-add" onclick="openAddTaskModal()">
+                            <i class="fas fa-plus"></i> Add New Task
+                        </button>
+                        <button class="action-btn btn-edit" onclick="showSection('tasks')">
+                            <i class="fas fa-cog"></i> Manage Tasks
+                        </button>
+                        <button class="action-btn btn-approve" onclick="showSection('withdrawals')">
+                            <i class="fas fa-check"></i> Process Withdrawals
+                        </button>
+                        <button class="action-btn btn-view" onclick="createSampleData()">
+                            <i class="fas fa-database"></i> Create Sample Data
+                        </button>
+                    </div>
+                </div>
+
+                <div class="content-section">
+                    <h3 style="margin-bottom: 1rem;">Recent Activities</h3>
+                    <div id="recent-activities">
+                        <p style="text-align: center; color: var(--text-secondary);">Loading activities...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tasks Section -->
+            <div id="tasks-section" class="content-section" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <h3>Task Management</h3>
+                    <div style="display: flex; gap: 1rem;">
+                        <input type="text" class="search-box" id="task-search" placeholder="Search tasks..." onkeyup="searchTasks()">
+                        <button class="btn-add" onclick="openAddTaskModal()">
+                            <i class="fas fa-plus"></i> Add New Task
+                        </button>
+                    </div>
+                </div>
+                <div id="tasks-message"></div>
+                <div style="overflow-x: auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Task Title</th>
+                                <th>Description</th>
+                                <th>Amount</th>
+                                <th>Timer</th>
+                                <th>URL</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tasks-list">
+                            <tr><td colspan="8" style="text-align: center;">Loading tasks...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Users Section -->
+            <div id="users-section" class="content-section" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <h3>User Management</h3>
+                    <input type="text" class="search-box" id="user-search" placeholder="Search users..." onkeyup="searchUsers()">
+                </div>
+                <div id="users-message"></div>
+                <div style="overflow-x: auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>User ID</th>
+                                <th>Username</th>
+                                <th>Email</th>
+                                <th>Balance</th>
+                                <th>Tasks Completed</th>
+                                <th>Joined Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-list">
+                            <tr><td colspan="7" style="text-align: center;">Loading users...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Withdrawals Section -->
+            <div id="withdrawals-section" class="content-section" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <h3>Withdrawal Management</h3>
+                    <input type="text" class="search-box" id="withdrawal-search" placeholder="Search withdrawals..." onkeyup="searchWithdrawals()">
+                </div>
+                <div id="withdrawals-message"></div>
+                <div style="overflow-x: auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>User ID</th>
+                                <th>Username</th>
+                                <th>Amount</th>
+                                <th>Method</th>
+                                <th>Details</th>
+                                <th>Status</th>
+                                <th>Request Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="withdrawals-list">
+                            <tr><td colspan="8" style="text-align: center;">Loading withdrawals...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Activities Section -->
+            <div id="activities-section" class="content-section" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <h3>Activity Log</h3>
+                    <input type="text" class="search-box" id="activity-search" placeholder="Search activities..." onkeyup="searchActivities()">
+                </div>
+                <div id="activities-message"></div>
+                <div style="overflow-x: auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Activity</th>
+                                <th>Amount</th>
+                                <th>Date</th>
+                                <th>Type</th>
+                            </tr>
+                        </thead>
+                        <tbody id="activities-list">
+                            <tr><td colspan="5" style="text-align: center;">Loading activities...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Settings Section -->
+            <div id="settings-section" class="content-section" style="display: none;">
+                <h3 style="margin-bottom: 1.5rem;">System Settings</h3>
+                <div id="settings-message"></div>
+                
+                <div class="form-group">
+                    <h4>Auto Task Upload</h4>
+                    <p style="color: var(--text-secondary); margin-bottom: 1rem;">Automatically upload tasks from CSV or JSON</p>
+                    <input type="file" id="task-upload-file" accept=".csv,.json" style="margin-bottom: 1rem;">
+                    <button class="action-btn btn-add" onclick="uploadTasksFromFile()">
+                        <i class="fas fa-upload"></i> Upload Tasks
+                    </button>
+                </div>
+
+                <div class="form-group">
+                    <h4>Bulk Task Creation</h4>
+                    <textarea id="bulk-tasks" placeholder='Paste tasks in JSON format:
+[
+  {
+    "title": "Task 1",
+    "description": "Description 1", 
+    "amount": 5.00,
+    "timer": 30,
+    "url": "https://example.com/task1"
+  }
+]' rows="10" style="width: 100%; font-family: monospace;"></textarea>
+                    <button class="action-btn btn-add" onclick="createBulkTasks()">
+                        <i class="fas fa-bolt"></i> Create Bulk Tasks
+                    </button>
+                </div>
+
+                <div class="form-group">
+                    <h4>System Configuration</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Minimum Withdrawal Amount ($)</label>
+                            <input type="number" id="min-withdrawal" value="10.00" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label>Default Task Timer (seconds)</label>
+                            <input type="number" id="default-timer" value="30">
+                        </div>
+                    </div>
+                    <button class="action-btn btn-approve" onclick="saveSystemSettings()">
+                        <i class="fas fa-save"></i> Save Settings
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Task Modal -->
+    <div id="add-task-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add New Task</h3>
+                <button class="close-modal" onclick="closeAddTaskModal()">&times;</button>
+            </div>
+            <form id="task-form">
+                <div class="form-group">
+                    <label for="task-title">Task Title *</label>
+                    <input type="text" id="task-title" placeholder="Enter task title" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="task-description">Task Description</label>
+                    <textarea id="task-description" placeholder="Enter task description" rows="3"></textarea>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="task-amount">Task Amount ($) *</label>
+                        <input type="number" id="task-amount" placeholder="0.00" step="0.01" min="0" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="task-timer">Timer (seconds) *</label>
+                        <input type="number" id="task-timer" placeholder="30" min="10" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="task-url">Task URL *</label>
+                    <input type="url" id="task-url" placeholder="https://example.com/task" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="task-category">Category</label>
+                    <select id="task-category">
+                        <option value="survey">Survey</option>
+                        <option value="video">Video</option>
+                        <option value="app">App Install</option>
+                        <option value="social">Social Media</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="task-status">Task Status</label>
+                    <select id="task-status">
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="action-btn btn-reject" onclick="closeAddTaskModal()">Cancel</button>
+                    <button type="submit" class="action-btn btn-approve">Add Task</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Task Modal -->
+    <div id="edit-task-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Task</h3>
+                <button class="close-modal" onclick="closeEditTaskModal()">&times;</button>
+            </div>
+            <form id="edit-task-form">
+                <input type="hidden" id="edit-task-id">
+                <div class="form-group">
+                    <label for="edit-task-title">Task Title *</label>
+                    <input type="text" id="edit-task-title" placeholder="Enter task title" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="edit-task-description">Task Description</label>
+                    <textarea id="edit-task-description" placeholder="Enter task description" rows="3"></textarea>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit-task-amount">Task Amount ($) *</label>
+                        <input type="number" id="edit-task-amount" placeholder="0.00" step="0.01" min="0" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit-task-timer">Timer (seconds) *</label>
+                        <input type="number" id="edit-task-timer" placeholder="30" min="10" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="edit-task-url">Task URL *</label>
+                    <input type="url" id="edit-task-url" placeholder="https://example.com/task" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="edit-task-category">Category</label>
+                    <select id="edit-task-category">
+                        <option value="survey">Survey</option>
+                        <option value="video">Video</option>
+                        <option value="app">App Install</option>
+                        <option value="social">Social Media</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="edit-task-status">Task Status</label>
+                    <select id="edit-task-status">
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="action-btn btn-reject" onclick="closeEditTaskModal()">Cancel</button>
+                    <button type="submit" class="action-btn btn-approve">Update Task</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- User Details Modal -->
+    <div id="user-details-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>User Details</h3>
+                <button class="close-modal" onclick="closeUserDetailsModal()">&times;</button>
+            </div>
+            <div id="user-details-content">
+                <!-- User details will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBbxp2dGCS4BZ1qlj7dPr4BRvQogIYVCcY",
+            authDomain: "survey-io-76104.firebaseapp.com",
+            databaseURL: "https://survey-io-76104-default-rtdb.firebaseio.com",
+            projectId: "survey-io-76104",
+            storageBucket: "survey-io-76104.firebasestorage.app",
+            messagingSenderId: "788956564253",
+            appId: "1:788956564253:web:8eefa99bb1e5be8b67aff4",
+            measurementId: "G-Z64B52QJS6"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // Admin credentials
+        const ADMIN_EMAIL = "admin@surveyio.com";
+        const ADMIN_PASSWORD = "Admin123!@#";
+
+        let currentAdmin = null;
+        let tasks = [];
+        let users = [];
+        let withdrawals = [];
+        let activities = [];
+        let realtimeListeners = [];
+
+        // Firebase Auth State Observer
+        auth.onAuthStateChanged((user) => {
+            console.log("Auth state changed:", user);
+            if (user) {
+                currentAdmin = user;
+                showAdminDashboard();
+                setupRealtimeListeners();
+            } else {
+                showLoginPage();
+            }
+        });
+
+        // Authentication Functions
+        async function adminLogin() {
+            const email = document.getElementById('admin-email').value;
+            const password = document.getElementById('admin-password').value;
+            const errorElement = document.getElementById('login-error');
+            const loginBtn = document.getElementById('login-btn');
+            const loginBtnText = document.getElementById('login-btn-text');
+
+            if (!email || !password) {
+                errorElement.textContent = "Please enter both email and password";
+                errorElement.style.display = "block";
+                return;
+            }
+
+            errorElement.style.display = "none";
+            
+            // Show loading state
+            loginBtn.disabled = true;
+            loginBtnText.innerHTML = '<div class="loading-spinner"></div> Authenticating...';
+
+            try {
+                const userCredential = await auth.signInWithEmailAndPassword(email, password);
+                console.log("Login successful:", userCredential.user);
+            } catch (error) {
+                console.error("Login error:", error);
+                errorElement.textContent = error.message;
+                errorElement.style.display = "block";
+                loginBtn.disabled = false;
+                loginBtnText.textContent = "Login to Dashboard";
+            }
+        }
+
+        async function adminLogout() {
+            try {
+                // Remove all realtime listeners
+                realtimeListeners.forEach(unsubscribe => unsubscribe());
+                realtimeListeners = [];
+                
+                await auth.signOut();
+                console.log("Admin logged out");
+            } catch (error) {
+                console.error("Logout error:", error);
+            }
+        }
+
+        // UI Navigation
+        function showLoginPage() {
+            document.getElementById('login-page').style.display = 'flex';
+            document.getElementById('admin-dashboard').style.display = 'none';
+        }
+
+        function showAdminDashboard() {
+            document.getElementById('login-page').style.display = 'none';
+            document.getElementById('admin-dashboard').style.display = 'flex';
+            
+            // Update admin info
+            document.getElementById('admin-name').textContent = 'Administrator';
+            document.getElementById('admin-email-display').textContent = currentAdmin.email;
+        }
+
+        function showSection(section) {
+            // Hide all sections
+            document.querySelectorAll('.content-section').forEach(el => {
+                el.style.display = 'none';
+            });
+            
+            // Remove active class from all nav links
+            document.querySelectorAll('.nav-link').forEach(el => {
+                el.classList.remove('active');
+            });
+            
+            // Show selected section and set active nav
+            document.getElementById(`${section}-section`).style.display = 'block';
+            document.querySelector(`[onclick="showSection('${section}')"]`).classList.add('active');
+            
+            // Update section title
+            const titles = {
+                'dashboard': 'Dashboard Overview',
+                'tasks': 'Task Management',
+                'users': 'User Management',
+                'withdrawals': 'Withdrawal Management',
+                'activities': 'Activity Log',
+                'settings': 'System Settings'
+            };
+            document.getElementById('section-title').textContent = titles[section];
+        }
+
+        // Realtime Data Listeners
+        function setupRealtimeListeners() {
+            // Listen for tasks
+            const tasksListener = db.collection('tasks')
+                .orderBy('createdAt', 'desc')
+                .onSnapshot(snapshot => {
+                    tasks = [];
+                    snapshot.forEach(doc => {
+                        tasks.push({ id: doc.id, ...doc.data() });
+                    });
+                    updateTasksStats();
+                    renderTasksTable();
+                });
+            realtimeListeners.push(tasksListener);
+
+            // Listen for users
+            const usersListener = db.collection('users')
+                .onSnapshot(snapshot => {
+                    users = [];
+                    snapshot.forEach(doc => {
+                        users.push({ id: doc.id, ...doc.data() });
+                    });
+                    updateUsersStats();
+                    renderUsersTable();
+                });
+            realtimeListeners.push(usersListener);
+
+            // Listen for withdrawals
+            const withdrawalsListener = db.collection('withdrawals')
+                .orderBy('createdAt', 'desc')
+                .onSnapshot(snapshot => {
+                    withdrawals = [];
+                    snapshot.forEach(doc => {
+                        withdrawals.push({ id: doc.id, ...doc.data() });
+                    });
+                    updateWithdrawalsStats();
+                    renderWithdrawalsTable();
+                });
+            realtimeListeners.push(withdrawalsListener);
+
+            // Listen for activities
+            const activitiesListener = db.collectionGroup('activities')
+                .orderBy('timestamp', 'desc')
+                .limit(50)
+                .onSnapshot(snapshot => {
+                    activities = [];
+                    snapshot.forEach(doc => {
+                        activities.push({ id: doc.id, ...doc.data() });
+                    });
+                    updateActivitiesStats();
+                    renderRecentActivities();
+                    renderActivitiesTable();
+                });
+            realtimeListeners.push(activitiesListener);
+        }
+
+        // Stats Update Functions
+        function updateUsersStats() {
+            document.getElementById('total-users').textContent = users.length;
+        }
+
+        function updateTasksStats() {
+            const activeTasks = tasks.filter(t => t.status === 'active').length;
+            document.getElementById('total-tasks').textContent = activeTasks;
+        }
+
+        function updateWithdrawalsStats() {
+            const pendingWithdrawals = withdrawals.filter(w => w.status === 'pending').length;
+            document.getElementById('pending-withdrawals').textContent = pendingWithdrawals;
+        }
+
+        function updateActivitiesStats() {
+            // Calculate total earnings from activities
+            let totalEarnings = 0;
+            activities.forEach(activity => {
+                if (activity.amount > 0) {
+                    totalEarnings += activity.amount;
+                }
+            });
+            document.getElementById('total-earnings').textContent = `$${totalEarnings.toFixed(2)}`;
+        }
+
+        // Task Management Functions
+        function renderTasksTable() {
+            const tasksList = document.getElementById('tasks-list');
+            tasksList.innerHTML = '';
+
+            if (tasks.length === 0) {
+                tasksList.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-secondary);">No tasks found</td></tr>';
+                return;
+            }
+
+            tasks.forEach(task => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><strong>${task.title || 'N/A'}</strong></td>
+                    <td>${task.description || 'No description'}</td>
+                    <td>$${(task.amount || 0).toFixed(2)}</td>
+                    <td>${task.timer || 0}s</td>
+                    <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <a href="${task.url}" target="_blank" style="color: var(--primary-color); text-decoration: none;">${task.url || 'N/A'}</a>
+                    </td>
+                    <td>
+                        <span class="status-badge status-${task.status || 'active'}">
+                            ${task.status || 'active'}
+                        </span>
+                    </td>
+                    <td>${task.createdAt ? task.createdAt.toDate().toLocaleDateString() : 'N/A'}</td>
+                    <td>
+                        <button class="action-btn btn-edit" onclick="editTask('${task.id}')" title="Edit Task">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="action-btn btn-delete" onclick="deleteTask('${task.id}')" title="Delete Task">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tasksList.appendChild(row);
+            });
+        }
+
+        function openAddTaskModal() {
+            document.getElementById('add-task-modal').style.display = 'flex';
+            document.getElementById('task-form').reset();
+        }
+
+        function closeAddTaskModal() {
+            document.getElementById('add-task-modal').style.display = 'none';
+        }
+
+        // Add Task Form Submission
+        document.getElementById('task-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const taskData = {
+                title: document.getElementById('task-title').value,
+                description: document.getElementById('task-description').value,
+                amount: parseFloat(document.getElementById('task-amount').value),
+                timer: parseInt(document.getElementById('task-timer').value),
+                url: document.getElementById('task-url').value,
+                category: document.getElementById('task-category').value,
+                status: document.getElementById('task-status').value,
+                createdAt: new Date(),
+                updatedAt: new Date()
+            };
+
+            try {
+                await db.collection('tasks').add(taskData);
+                showMessage('tasks-message', 'Task added successfully!', 'success');
+                closeAddTaskModal();
+            } catch (error) {
+                console.error("Error adding task:", error);
+                showMessage('tasks-message', 'Error adding task: ' + error.message, 'error');
+            }
+        });
+
+        // Edit Task Functions
+        async function editTask(taskId) {
+            const task = tasks.find(t => t.id === taskId);
+            if (!task) return;
+
+            document.getElementById('edit-task-id').value = taskId;
+            document.getElementById('edit-task-title').value = task.title || '';
+            document.getElementById('edit-task-description').value = task.description || '';
+            document.getElementById('edit-task-amount').value = task.amount || 0;
+            document.getElementById('edit-task-timer').value = task.timer || 30;
+            document.getElementById('edit-task-url').value = task.url || '';
+            document.getElementById('edit-task-category').value = task.category || 'survey';
+            document.getElementById('edit-task-status').value = task.status || 'active';
+
+            document.getElementById('edit-task-modal').style.display = 'flex';
+        }
+
+        function closeEditTaskModal() {
+            document.getElementById('edit-task-modal').style.display = 'none';
+        }
+
+        // Update Task Form Submission
+        document.getElementById('edit-task-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const taskId = document.getElementById('edit-task-id').value;
+            const taskData = {
+                title: document.getElementById('edit-task-title').value,
+                description: document.getElementById('edit-task-description').value,
+                amount: parseFloat(document.getElementById('edit-task-amount').value),
+                timer: parseInt(document.getElementById('edit-task-timer').value),
+                url: document.getElementById('edit-task-url').value,
+                category: document.getElementById('edit-task-category').value,
+                status: document.getElementById('edit-task-status').value,
+                updatedAt: new Date()
+            };
+
+            try {
+                await db.collection('tasks').doc(taskId).update(taskData);
+                showMessage('tasks-message', 'Task updated successfully!', 'success');
+                closeEditTaskModal();
+            } catch (error) {
+                console.error("Error updating task:", error);
+                showMessage('tasks-message', 'Error updating task: ' + error.message, 'error');
+            }
+        });
+
+        async function deleteTask(taskId) {
+            if (!confirm('Are you sure you want to delete this task?')) return;
+
+            try {
+                await db.collection('tasks').doc(taskId).delete();
+                showMessage('tasks-message', 'Task deleted successfully!', 'success');
+            } catch (error) {
+                console.error("Error deleting task:", error);
+                showMessage('tasks-message', 'Error deleting task: ' + error.message, 'error');
+            }
+        }
+
+        // User Management Functions
+        function renderUsersTable() {
+            const usersList = document.getElementById('users-list');
+            usersList.innerHTML = '';
+
+            if (users.length === 0) {
+                usersList.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">No users found</td></tr>';
+                return;
+            }
+
+            users.forEach(user => {
+                const completedTasks = activities.filter(a => a.userId === user.id && a.type === 'task_completed').length;
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td style="font-family: monospace; font-size: 0.8rem;">${user.id.substring(0, 8)}...</td>
+                    <td>${user.username || 'N/A'}</td>
+                    <td>${user.email || 'N/A'}</td>
+                    <td>$${(user.balance || 0).toFixed(2)}</td>
+                    <td>${completedTasks}</td>
+                    <td>${user.createdAt ? user.createdAt.toDate().toLocaleDateString() : 'N/A'}</td>
+                    <td>
+                        <button class="action-btn btn-view" onclick="viewUserDetails('${user.id}')" title="View Details">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
+                `;
+                usersList.appendChild(row);
+            });
+        }
+
+        async function viewUserDetails(userId) {
+            const user = users.find(u => u.id === userId);
+            if (!user) return;
+
+            // Get user activities
+            const userActivities = activities.filter(a => a.userId === userId);
+            const completedTasks = userActivities.filter(a => a.type === 'task_completed').length;
+            const totalEarned = userActivities.filter(a => a.amount > 0).reduce((sum, a) => sum + a.amount, 0);
+            const totalWithdrawn = Math.abs(userActivities.filter(a => a.amount < 0).reduce((sum, a) => sum + a.amount, 0));
+
+            const content = `
+                <div class="form-group">
+                    <h4>User Information</h4>
+                    <p><strong>Username:</strong> ${user.username || 'N/A'}</p>
+                    <p><strong>Email:</strong> ${user.email || 'N/A'}</p>
+                    <p><strong>User ID:</strong> <code>${user.id}</code></p>
+                    <p><strong>Joined:</strong> ${user.createdAt ? user.createdAt.toDate().toLocaleDateString() : 'N/A'}</p>
+                </div>
+                
+                <div class="form-group">
+                    <h4>Financial Summary</h4>
+                    <p><strong>Current Balance:</strong> $${(user.balance || 0).toFixed(2)}</p>
+                    <p><strong>Total Earned:</strong> $${totalEarned.toFixed(2)}</p>
+                    <p><strong>Total Withdrawn:</strong> $${totalWithdrawn.toFixed(2)}</p>
+                </div>
+                
+                <div class="form-group">
+                    <h4>Activity Summary</h4>
+                    <p><strong>Tasks Completed:</strong> ${completedTasks}</p>
+                    <p><strong>Total Activities:</strong> ${userActivities.length}</p>
+                </div>
+                
+                <div class="form-actions">
+                    <button class="action-btn btn-edit" onclick="editUserBalance('${user.id}')">
+                        <i class="fas fa-edit"></i> Edit Balance
+                    </button>
+                    <button class="action-btn btn-view" onclick="viewUserActivities('${user.id}')">
+                        <i class="fas fa-history"></i> View Activities
+                    </button>
+                </div>
+            `;
+
+            document.getElementById('user-details-content').innerHTML = content;
+            document.getElementById('user-details-modal').style.display = 'flex';
+        }
+
+        function closeUserDetailsModal() {
+            document.getElementById('user-details-modal').style.display = 'none';
+        }
+
+        async function editUserBalance(userId) {
+            const user = users.find(u => u.id === userId);
+            if (!user) return;
+
+            const newBalance = prompt('Enter new balance:', user.balance || 0);
+            if (newBalance === null) return;
+
+            try {
+                await db.collection('users').doc(userId).update({
+                    balance: parseFloat(newBalance),
+                    updatedAt: new Date()
+                });
+                showMessage('users-message', 'User balance updated successfully!', 'success');
+                closeUserDetailsModal();
+            } catch (error) {
+                console.error("Error updating user balance:", error);
+                showMessage('users-message', 'Error updating balance: ' + error.message, 'error');
+            }
+        }
+
+        // Withdrawal Management Functions
+        function renderWithdrawalsTable() {
+            const withdrawalsList = document.getElementById('withdrawals-list');
+            withdrawalsList.innerHTML = '';
+
+            if (withdrawals.length === 0) {
+                withdrawalsList.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-secondary);">No withdrawals found</td></tr>';
+                return;
+            }
+
+            withdrawals.forEach(withdrawal => {
+                const user = users.find(u => u.id === withdrawal.userId) || {};
+                const paymentDetails = withdrawal.paymentDetails || {};
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td style="font-family: monospace; font-size: 0.8rem;">${withdrawal.userId ? withdrawal.userId.substring(0, 8) + '...' : 'N/A'}</td>
+                    <td>${user.username || 'Unknown User'}</td>
+                    <td>$${(withdrawal.amount || 0).toFixed(2)}</td>
+                    <td>${withdrawal.paymentMethod || 'N/A'}</td>
+                    <td>${paymentDetails.phone || paymentDetails.email || paymentDetails.id || 'N/A'}</td>
+                    <td>
+                        <span class="status-badge status-${withdrawal.status || 'pending'}">
+                            ${withdrawal.status || 'pending'}
+                        </span>
+                    </td>
+                    <td>${withdrawal.createdAt ? withdrawal.createdAt.toDate().toLocaleDateString() : 'N/A'}</td>
+                    <td>
+                        ${withdrawal.status === 'pending' ? `
+                            <button class="action-btn btn-approve" onclick="updateWithdrawalStatus('${withdrawal.id}', 'approved')" title="Approve">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <button class="action-btn btn-reject" onclick="updateWithdrawalStatus('${withdrawal.id}', 'rejected')" title="Reject">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        ` : 'No actions'}
+                    </td>
+                `;
+                withdrawalsList.appendChild(row);
+            });
+        }
+
+        async function updateWithdrawalStatus(withdrawalId, status) {
+            try {
+                await db.collection('withdrawals').doc(withdrawalId).update({
+                    status: status,
+                    processedAt: new Date(),
+                    processedBy: currentAdmin.uid
+                });
+                
+                showMessage('withdrawals-message', `Withdrawal ${status} successfully!`, 'success');
+                
+            } catch (error) {
+                console.error("Error updating withdrawal:", error);
+                showMessage('withdrawals-message', 'Error updating withdrawal: ' + error.message, 'error');
+            }
+        }
+
+        // Activities Functions
+        function renderRecentActivities() {
+            const recentActivities = document.getElementById('recent-activities');
+            const recentItems = activities.slice(0, 10);
+            
+            if (recentItems.length === 0) {
+                recentActivities.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">No recent activities</p>';
+                return;
+            }
+
+            let html = '';
+            recentItems.forEach(activity => {
+                const user = users.find(u => u.id === activity.userId) || {};
+                const amountClass = activity.amount > 0 ? 'positive' : 'negative';
+                const amountSign = activity.amount > 0 ? '+' : '';
+                
+                html += `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.8rem; border-bottom: 1px solid var(--border-color);">
+                        <div>
+                            <strong>${user.username || 'Unknown User'}</strong>
+                            <div style="color: var(--text-secondary); font-size: 0.9rem;">${activity.description || 'N/A'}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="color: ${amountClass === 'positive' ? 'var(--success-color)' : 'var(--error-color)'}; font-weight: 600;">
+                                ${amountSign}$${Math.abs(activity.amount).toFixed(2)}
+                            </div>
+                            <div style="color: var(--text-secondary); font-size: 0.8rem;">
+                                ${activity.timestamp ? activity.timestamp.toDate().toLocaleDateString() : 'N/A'}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            recentActivities.innerHTML = html;
+        }
+
+        function renderActivitiesTable() {
+            const activitiesList = document.getElementById('activities-list');
+            activitiesList.innerHTML = '';
+
+            if (activities.length === 0) {
+                activitiesList.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-secondary);">No activities found</td></tr>';
+                return;
+            }
+
+            activities.forEach(activity => {
+                const user = users.find(u => u.id === activity.userId) || {};
+                const amountClass = activity.amount > 0 ? 'positive' : 'negative';
+                const amountSign = activity.amount > 0 ? '+' : '';
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${user.username || 'Unknown User'}</td>
+                    <td>${activity.description || 'N/A'}</td>
+                    <td style="color: ${amountClass === 'positive' ? 'var(--success-color)' : 'var(--error-color)'}; font-weight: 600;">
+                        ${amountSign}$${Math.abs(activity.amount).toFixed(2)}
+                    </td>
+                    <td>${activity.timestamp ? activity.timestamp.toDate().toLocaleDateString() : 'N/A'}</td>
+                    <td>${activity.type || 'N/A'}</td>
+                `;
+                activitiesList.appendChild(row);
+            });
+        }
+
+        // Bulk Task Creation
+        async function createBulkTasks() {
+            const bulkTasksText = document.getElementById('bulk-tasks').value;
+            if (!bulkTasksText.trim()) {
+                showMessage('settings-message', 'Please enter tasks in JSON format', 'error');
+                return;
+            }
+
+            try {
+                const tasksData = JSON.parse(bulkTasksText);
+                if (!Array.isArray(tasksData)) {
+                    throw new Error('Tasks must be in array format');
+                }
+
+                let successCount = 0;
+                let errorCount = 0;
+
+                for (const task of tasksData) {
+                    try {
+                        await db.collection('tasks').add({
+                            ...task,
+                            status: task.status || 'active',
+                            createdAt: new Date(),
+                            updatedAt: new Date()
+                        });
+                        successCount++;
+                    } catch (error) {
+                        console.error("Error adding task:", error);
+                        errorCount++;
+                    }
+                }
+
+                showMessage('settings-message', `Successfully created ${successCount} tasks. ${errorCount} failed.`, 'success');
+                document.getElementById('bulk-tasks').value = '';
+
+            } catch (error) {
+                console.error("Error parsing bulk tasks:", error);
+                showMessage('settings-message', 'Error parsing tasks: ' + error.message, 'error');
+            }
+        }
+
+        // File Upload for Tasks
+        async function uploadTasksFromFile() {
+            const fileInput = document.getElementById('task-upload-file');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showMessage('settings-message', 'Please select a file', 'error');
+                return;
+            }
+
+            try {
+                const text = await readFileAsText(file);
+                let tasksData;
+
+                if (file.name.endsWith('.json')) {
+                    tasksData = JSON.parse(text);
+                } else if (file.name.endsWith('.csv')) {
+                    tasksData = parseCSV(text);
+                } else {
+                    throw new Error('Unsupported file format. Use CSV or JSON.');
+                }
+
+                if (!Array.isArray(tasksData)) {
+                    throw new Error('Tasks must be in array format');
+                }
+
+                let successCount = 0;
+                for (const task of tasksData) {
+                    try {
+                        await db.collection('tasks').add({
+                            title: task.title,
+                            description: task.description || '',
+                            amount: parseFloat(task.amount),
+                            timer: parseInt(task.timer) || 30,
+                            url: task.url,
+                            category: task.category || 'other',
+                            status: 'active',
+                            createdAt: new Date(),
+                            updatedAt: new Date()
+                        });
+                        successCount++;
+                    } catch (error) {
+                        console.error("Error adding task:", error);
+                    }
+                }
+
+                showMessage('settings-message', `Successfully uploaded ${successCount} tasks`, 'success');
+                fileInput.value = '';
+
+            } catch (error) {
+                console.error("Error uploading tasks:", error);
+                showMessage('settings-message', 'Error uploading tasks: ' + error.message, 'error');
+            }
+        }
+
+        function readFileAsText(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.onerror = e => reject(e);
+                reader.readAsText(file);
+            });
+        }
+
+        function parseCSV(csvText) {
+            const lines = csvText.split('\n');
+            const headers = lines[0].split(',').map(h => h.trim());
+            const result = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                if (!lines[i].trim()) continue;
+                
+                const obj = {};
+                const currentLine = lines[i].split(',');
+                
+                for (let j = 0; j < headers.length; j++) {
+                    obj[headers[j]] = currentLine[j] ? currentLine[j].trim() : '';
+                }
+                result.push(obj);
+            }
+            return result;
+        }
+
+        // Search Functions
+        function searchTasks() {
+            const searchTerm = document.getElementById('task-search').value.toLowerCase();
+            const filteredTasks = tasks.filter(task => 
+                task.title.toLowerCase().includes(searchTerm) ||
+                task.description.toLowerCase().includes(searchTerm) ||
+                task.category.toLowerCase().includes(searchTerm)
+            );
+            renderFilteredTasks(filteredTasks);
+        }
+
+        function renderFilteredTasks(filteredTasks) {
+            const tasksList = document.getElementById('tasks-list');
+            tasksList.innerHTML = '';
+
+            if (filteredTasks.length === 0) {
+                tasksList.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-secondary);">No tasks found</td></tr>';
+                return;
+            }
+
+            filteredTasks.forEach(task => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><strong>${task.title || 'N/A'}</strong></td>
+                    <td>${task.description || 'No description'}</td>
+                    <td>$${(task.amount || 0).toFixed(2)}</td>
+                    <td>${task.timer || 0}s</td>
+                    <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <a href="${task.url}" target="_blank" style="color: var(--primary-color); text-decoration: none;">${task.url || 'N/A'}</a>
+                    </td>
+                    <td>
+                        <span class="status-badge status-${task.status || 'active'}">
+                            ${task.status || 'active'}
+                        </span>
+                    </td>
+                    <td>${task.createdAt ? task.createdAt.toDate().toLocaleDateString() : 'N/A'}</td>
+                    <td>
+                        <button class="action-btn btn-edit" onclick="editTask('${task.id}')" title="Edit Task">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="action-btn btn-delete" onclick="deleteTask('${task.id}')" title="Delete Task">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tasksList.appendChild(row);
+            });
+        }
+
+        // Similar search functions for users, withdrawals, activities
+        function searchUsers() {
+            const searchTerm = document.getElementById('user-search').value.toLowerCase();
+            const filteredUsers = users.filter(user => 
+                user.username.toLowerCase().includes(searchTerm) ||
+                user.email.toLowerCase().includes(searchTerm)
+            );
+            renderFilteredUsers(filteredUsers);
+        }
+
+        function renderFilteredUsers(filteredUsers) {
+            const usersList = document.getElementById('users-list');
+            usersList.innerHTML = '';
+
+            if (filteredUsers.length === 0) {
+                usersList.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">No users found</td></tr>';
+                return;
+            }
+
+            filteredUsers.forEach(user => {
+                const completedTasks = activities.filter(a => a.userId === user.id && a.type === 'task_completed').length;
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td style="font-family: monospace; font-size: 0.8rem;">${user.id.substring(0, 8)}...</td>
+                    <td>${user.username || 'N/A'}</td>
+                    <td>${user.email || 'N/A'}</td>
+                    <td>$${(user.balance || 0).toFixed(2)}</td>
+                    <td>${completedTasks}</td>
+                    <td>${user.createdAt ? user.createdAt.toDate().toLocaleDateString() : 'N/A'}</td>
+                    <td>
+                        <button class="action-btn btn-view" onclick="viewUserDetails('${user.id}')" title="View Details">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
+                `;
+                usersList.appendChild(row);
+            });
+        }
+
+        // Message Display Function
+        function showMessage(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            if (!element) return;
+            
+            const bgColor = type === 'error' ? 'var(--error-color)' : 
+                           type === 'success' ? 'var(--success-color)' : 'var(--info-color)';
+            
+            element.innerHTML = `<div style="border: 1px solid ${bgColor}; background: ${bgColor}15; color: ${bgColor}; padding: 1rem; border-radius: 8px; margin: 1rem 0;">
+                ${message}
+            </div>`;
+            
+            if (type === 'success') {
+                setTimeout(() => {
+                    element.innerHTML = '';
+                }, 5000);
+            }
+        }
+
+        // Sample Data Creation
+        async function createSampleData() {
+            try {
+                showMessage('dashboard-message', 'Creating sample data...', 'info');
+                
+                // Create sample tasks
+                const sampleTasks = [
+                    {
+                        title: "Complete Shopping Survey",
+                        description: "Share your shopping experience and earn money",
+                        amount: 5.00,
+                        timer: 30,
+                        url: "https://example.com/survey1",
+                        category: "survey",
+                        status: "active",
+                        createdAt: new Date()
+                    },
+                    {
+                        title: "Watch Video Tutorial", 
+                        description: "Watch this video and answer simple questions",
+                        amount: 3.50,
+                        timer: 45,
+                        url: "https://example.com/video1",
+                        category: "video",
+                        status: "active",
+                        createdAt: new Date()
+                    },
+                    {
+                        title: "Product Review Task",
+                        description: "Review our new product features",
+                        amount: 7.00,
+                        timer: 60,
+                        url: "https://example.com/review1",
+                        category: "survey",
+                        status: "active",
+                        createdAt: new Date()
+                    },
+                    {
+                        title: "Social Media Share",
+                        description: "Share our content on your social media",
+                        amount: 4.00,
+                        timer: 25,
+                        url: "https://example.com/social1",
+                        category: "social",
+                        status: "active",
+                        createdAt: new Date()
+                    }
+                ];
+
+                for (const task of sampleTasks) {
+                    await db.collection('tasks').add(task);
+                }
+
+                showMessage('dashboard-message', 'Sample data created successfully!', 'success');
+                
+            } catch (error) {
+                console.error("Error creating sample data:", error);
+                showMessage('dashboard-message', 'Error creating sample data: ' + error.message, 'error');
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("SurveyIO Admin Dashboard Initialized");
+        });
+
+    </script>
+</body>
+</html>
